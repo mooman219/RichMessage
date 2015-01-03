@@ -17,7 +17,7 @@ public class HoverEvent extends JsonData {
      * {@inheritDoc}
      */
     @Override
-    public void write(JsonGenerator g) throws IOException {
+    protected void write(JsonGenerator g) throws IOException {
         g.writeStringField("action", "show_text");
         g.writeArrayFieldStart("value");
         this.value.write(g);

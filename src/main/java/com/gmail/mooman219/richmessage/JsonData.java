@@ -30,7 +30,7 @@ public abstract class JsonData {
      * @param g the generator
      * @throws IOException this should never be thrown
      */
-    public abstract void write(JsonGenerator g) throws IOException;
+    protected abstract void write(JsonGenerator g) throws IOException;
 
     /**
      * Produces a non-fancy string representation of this class.

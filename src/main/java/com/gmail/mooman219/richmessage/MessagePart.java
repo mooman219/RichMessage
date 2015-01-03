@@ -28,7 +28,7 @@ public class MessagePart extends JsonData {
      * {@inheritDoc}
      */
     @Override
-    public void write(JsonGenerator g) throws IOException {
+    protected void write(JsonGenerator g) throws IOException {
         if (text != null) {
             g.writeStringField("text", text);
         }

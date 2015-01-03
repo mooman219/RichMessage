@@ -2,15 +2,16 @@ package com.gmail.mooman219.richmessage;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import java.io.IOException;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
+/**
+ * @author Joseph Cumbo (mooman219)
+ */
 public class RichMessage extends JsonData {
 
     private final ArrayList<MessagePart> messages = new ArrayList<>();
@@ -18,11 +19,23 @@ public class RichMessage extends JsonData {
     private String compiledMessage;
     private boolean dirty;
 
+    /**
+     * Creates a new RichMessage starting with the provided text.
+     *
+     * @param text the text to start the message with
+     */
     public RichMessage(String text) {
         super(false);
         then(text);
     }
 
+    /**
+     * Starts a new message segment. A new message segment does not share any
+     * attributes set in a previous segment.
+     *
+     * @param text the text to start the new message segment with
+     * @return this RichMessage
+     */
     public final RichMessage then(String text) {
         dirty = true;
         current = new MessagePart(text);
@@ -30,24 +43,42 @@ public class RichMessage extends JsonData {
         return this;
     }
 
-    public RichMessage formatPattern(Pattern pattern, String replacement) {
-        dirty = true;
-        current.text = pattern.matcher(current.text).replaceAll(replacement);
-        return this;
-    }
-
+    /**
+     * Assigns a color to this message segment.
+     *
+     * @param color the color to assign
+     * @return this RichMessage
+     */
     public RichMessage color(ChatColor color) {
         dirty = true;
         current.color = color;
         return this;
     }
 
+    /**
+     * Assigns a style to this message segment. This overwrites any previously
+     * set styles to this message segment. Valid styles include {ChatColor.BOLD,
+     * ChatColor.ITALIC, ChatColor.UNDERLINE, ChatColor.STRIKETHROUGH,
+     * ChatColor.MAGIC}.
+     *
+     * @param style the style to assign
+     * @return this RichMessage
+     */
     public RichMessage style(ChatColor style) {
         clearStyle();
         setStyle(style);
         return this;
     }
 
+    /**
+     * Assigns multiple styles to this message segment. This overwrites any
+     * previously set styles to this message segment. Valid styles include
+     * {ChatColor.BOLD, ChatColor.ITALIC, ChatColor.UNDERLINE,
+     * ChatColor.STRIKETHROUGH, ChatColor.MAGIC}.
+     *
+     * @param styles the style to assign
+     * @return this RichMessage
+     */
     public RichMessage style(ChatColor... styles) {
         clearStyle();
         for (ChatColor style : styles) {
@@ -56,6 +87,11 @@ public class RichMessage extends JsonData {
         return this;
     }
 
+    /**
+     * Clears any styles set on this message segment.
+     *
+     * @return this RichMessage
+     */
     public RichMessage clearStyle() {
         dirty = true;
         current.bold = false;
@@ -91,12 +127,27 @@ public class RichMessage extends JsonData {
         }
     }
 
+    /**
+     * Adds an 'insertion' event to this message segment. If this message
+     * segment is clicked, the provided string is inserted into the player's
+     * chat bar.
+     *
+     * @param insertion the insertion text
+     * @return this RichMessage
+     */
     public RichMessage insertion(String insertion) {
         dirty = true;
         current.insertion = insertion;
         return this;
     }
 
+    /**
+     * Adds an 'open_url' event to this message segment. If this message segment
+     * is clicked, the provided link is opened on the player's end.
+     *
+     * @param link the link to open
+     * @return this RichMessage
+     */
     public RichMessage link(String link) {
         dirty = true;
         if (current.clickEvent == null) {
@@ -107,6 +158,13 @@ public class RichMessage extends JsonData {
         return this;
     }
 
+    /**
+     * Adds a 'run_command' event to this message segment. If this message
+     * segment is clicked, the player will run the provided command.
+     *
+     * @param command the command to run
+     * @return this RichMessage
+     */
     public RichMessage command(String command) {
         dirty = true;
         if (current.clickEvent == null) {
@@ -117,6 +175,13 @@ public class RichMessage extends JsonData {
         return this;
     }
 
+    /**
+     * Adds an 'suggest_command' event to this message segment. If this message
+     * segment is clicked, the provided string replaces the player's chat bar.
+     *
+     * @param text the command to suggest
+     * @return this RichMessage
+     */
     public RichMessage suggest(String text) {
         dirty = true;
         if (current.clickEvent == null) {
@@ -127,6 +192,13 @@ public class RichMessage extends JsonData {
         return this;
     }
 
+    /**
+     * Adds a 'show_text' event to this message segment. If this message segment
+     * is hovered over, the provided tooltip is displayed.
+     *
+     * @param tooltip the tooltip to display
+     * @return this RichMessage
+     */
     public RichMessage tooltip(RichMessage tooltip) {
         dirty = true;
         if (tooltip == this) {
@@ -139,25 +211,21 @@ public class RichMessage extends JsonData {
         return this;
     }
 
-    public void send(Player player, Object... arguments) {
-        Map<String, Object> assignments = new HashMap<>();
-        Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "tellraw " + player.getName() + " " + toString(arguments));
-    }
-
+    /**
+     * Sends the message to the player.
+     *
+     * @param player the player to send the message to
+     */
     public void send(Player player) {
         Map<String, Object> assignments = new HashMap<>();
         Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "tellraw " + player.getName() + " " + toString());
-    }
-
-    public String toString(Object... arguments) {
-        return MessageFormat.format(toString(), arguments);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void write(JsonGenerator g) throws IOException {
+    protected void write(JsonGenerator g) throws IOException {
         for (MessagePart part : messages) {
             g.writeStartObject();
             part.write(g);

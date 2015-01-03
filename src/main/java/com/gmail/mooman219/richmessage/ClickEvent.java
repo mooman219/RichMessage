@@ -18,7 +18,7 @@ public class ClickEvent extends JsonData {
      * {@inheritDoc}
      */
     @Override
-    public void write(JsonGenerator g) throws IOException {
+    protected void write(JsonGenerator g) throws IOException {
         g.writeStringField("action", this.action);
         g.writeStringField("value", this.value);
         g.writeEndObject();
