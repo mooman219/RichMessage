@@ -16,11 +16,11 @@ public abstract class JsonData {
      * @param isObject true, this is an object and will be wrapped by "{}",
      * false this is an array and will be wrapped by "[]"
      */
-    public JsonData(boolean isObject) {
+    protected JsonData(boolean isObject) {
         this.isObject = isObject;
     }
 
-    public JsonData() {
+    protected JsonData() {
         this.isObject = true;
     }
 
@@ -37,7 +37,7 @@ public abstract class JsonData {
      *
      * @return The json string representing this class
      */
-    public String serialize() {
+    protected String serialize() {
         return serialize(false);
     }
 
@@ -48,7 +48,7 @@ public abstract class JsonData {
      * mapper will be used to serialize this
      * @return The json string representing this class
      */
-    public String serialize(boolean fancy) {
+    protected String serialize(boolean fancy) {
         StringWriter writer = new StringWriter();
         try {
             JsonGenerator g = factory.createGenerator(writer);
