@@ -1,126 +1,179 @@
 package com.gmail.mooman219.richmessage;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.core.JsonGenerator;
+import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
-public class RichMessage {
+public class RichMessage extends JsonData {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
-
-    static {
-        RichMessage.mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        RichMessage.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        RichMessage.mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        RichMessage.mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
-    }
-
-    private ArrayList<RichMessagePart> messages = new ArrayList<>();
+    private final ArrayList<MessagePart> messages = new ArrayList<>();
+    private MessagePart current;
+    private String compiledMessage;
     private boolean dirty;
-    private String message;
 
     public RichMessage(String text) {
-        this.messages.add(new RichMessagePart(text));
-        this.dirty = true;
+        super(false);
+        then(text);
+    }
+
+    public final RichMessage then(String text) {
+        dirty = true;
+        current = new MessagePart(text);
+        messages.add(current);
+        return this;
     }
 
     public RichMessage formatPattern(Pattern pattern, String replacement) {
-        this.current().formatPattern(pattern, replacement);
-        this.dirty = true;
+        dirty = true;
+        current.text = pattern.matcher(current.text).replaceAll(replacement);
         return this;
     }
 
-    public RichMessage then(String text) {
-        this.messages.add(new RichMessagePart(text));
-        this.dirty = true;
+    public RichMessage color(ChatColor color) {
+        dirty = true;
+        current.color = color;
         return this;
     }
 
-    public RichMessage color(RichColor color) {
-        this.current().color(color);
-        this.dirty = true;
+    public RichMessage style(ChatColor style) {
+        clearStyle();
+        setStyle(style);
         return this;
     }
 
-    public RichMessage command(String command) {
-        this.current().command(command);
-        this.dirty = true;
+    public RichMessage style(ChatColor... styles) {
+        clearStyle();
+        for (ChatColor style : styles) {
+            setStyle(style);
+        }
+        return this;
+    }
+
+    public RichMessage clearStyle() {
+        dirty = true;
+        current.bold = false;
+        current.italic = false;
+        current.underlined = false;
+        current.strikethrough = false;
+        current.obfuscated = false;
+        return this;
+    }
+
+    private void setStyle(ChatColor style) {
+        if (style == null) {
+            return;
+        }
+        switch (style) {
+            case BOLD:
+                current.bold = true;
+                break;
+            case ITALIC:
+                current.italic = true;
+                break;
+            case UNDERLINE:
+                current.underlined = true;
+                break;
+            case STRIKETHROUGH:
+                current.strikethrough = true;
+                break;
+            case MAGIC:
+                current.obfuscated = true;
+                break;
+            default:
+                break;
+        }
+    }
+
+    public RichMessage insertion(String insertion) {
+        dirty = true;
+        current.insertion = insertion;
         return this;
     }
 
     public RichMessage link(String link) {
-        this.current().link(link);
-        this.dirty = true;
+        dirty = true;
+        if (current.clickEvent == null) {
+            current.clickEvent = new ClickEvent();
+        }
+        current.clickEvent.action = "open_url";
+        current.clickEvent.value = link;
         return this;
     }
 
-    public RichMessage style(RichStyle style) {
-        this.current().style(style);
-        this.dirty = true;
-        return this;
-    }
-
-    public RichMessage style(RichStyle... styles) {
-        this.current().style(styles);
-        this.dirty = true;
+    public RichMessage command(String command) {
+        dirty = true;
+        if (current.clickEvent == null) {
+            current.clickEvent = new ClickEvent();
+        }
+        current.clickEvent.action = "run_command";
+        current.clickEvent.value = command;
         return this;
     }
 
     public RichMessage suggest(String text) {
-        this.current().suggest(text);
-        this.dirty = true;
+        dirty = true;
+        if (current.clickEvent == null) {
+            current.clickEvent = new ClickEvent();
+        }
+        current.clickEvent.action = "suggest_command";
+        current.clickEvent.value = text;
         return this;
     }
 
-    public RichMessage tooltip(String tooltip) {
-        this.current().tooltip(tooltip);
-        this.dirty = true;
+    public RichMessage tooltip(RichMessage tooltip) {
+        dirty = true;
+        if (tooltip == this) {
+            throw new IllegalArgumentException("Tooltip cannot be the same RichMessage as the current RichMessage.");
+        }
+        if (current.hoverEvent == null) {
+            current.hoverEvent = new HoverEvent();
+        }
+        current.hoverEvent.value = tooltip;
         return this;
     }
 
-    public RichMessage tooltip(Iterable<String> lines) {
-        this.current().tooltip(lines);
-        this.dirty = true;
-        return this;
-    }
-
-    public RichMessage tooltip(String... lines) {
-        this.current().tooltip(lines);
-        this.dirty = true;
-        return this;
-    }
-
-    private RichMessagePart current() {
-        return this.messages.get(this.messages.size() - 1);
+    public void send(Player player, Object... arguments) {
+        Map<String, Object> assignments = new HashMap<>();
+        Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "tellraw " + player.getName() + " " + toString(arguments));
     }
 
     public void send(Player player) {
+        Map<String, Object> assignments = new HashMap<>();
         Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(), "tellraw " + player.getName() + " " + toString());
     }
 
-    @Override
-    public String toString() {
-        if (this.dirty) {
-            this.dirty = false;
-            this.message = parse(this.messages);
-        }
-        return this.message;
+    public String toString(Object... arguments) {
+        return MessageFormat.format(toString(), arguments);
     }
 
-    private static String parse(Object object) {
-        try {
-            return mapper.writeValueAsString(object);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void write(JsonGenerator g) throws IOException {
+        for (MessagePart part : messages) {
+            g.writeStartObject();
+            part.write(g);
         }
-        return "";
+        g.writeEndArray();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        if (dirty) {
+            dirty = false;
+            compiledMessage = serialize();
+        }
+        return compiledMessage;
     }
 }
